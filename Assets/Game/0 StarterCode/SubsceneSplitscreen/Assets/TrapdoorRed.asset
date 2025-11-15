@@ -14,3 +14,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   material: {fileID: 2100000, guid: af35575c02c212142b50872792894eb2, type: 2}
   symbol: {fileID: -5177388603050735206, guid: 8884154dfe85442a3a3578be807dbcdf, type: 3}
+  symbolColor: {r: 1, g: 0.5411765, b: 0.55077523, a: 1}

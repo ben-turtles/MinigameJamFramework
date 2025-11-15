@@ -20,9 +20,6 @@ namespace Starter.SubsceneSplitscreen {
         [SerializeField] private GameObject trapdoorPrefab;
         [SerializeField] private List<GameObject> sideWalls;
         [SerializeField] private GameObject roof;
-        [SerializeField] private Canvas buttonCanvas;
-        [SerializeField] private GameObject buttonPanel;
-        [SerializeField] private GameObject buttonPrefab;
         [SerializeField] private new GameObject camera;
 
         private Queue<Trapdoor> trapdoors;
@@ -50,7 +47,7 @@ namespace Starter.SubsceneSplitscreen {
         {
             if (updateCameraPosition)
             {
-                // Tween camera to target
+                // Push camera to target
                 Vector3 startPosition = camera.transform.position;
                 Vector3 newPosition = Vector3.SmoothDamp(
                     startPosition, targetCameraPosition, ref cameraVelocity, CAMERA_MOVE_TIME
@@ -71,7 +68,7 @@ namespace Starter.SubsceneSplitscreen {
                 return false;
             }
             // Open first trapdoor if matches
-            if (1 + 1 == 2)//trapdoors.Peek().type == openType)
+            if (trapdoors.Peek().type == openType)
             {
                 Trapdoor opening = trapdoors.Dequeue();
                 opening.OpenLatch();

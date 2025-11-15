@@ -7,7 +7,7 @@ namespace Starter.SubsceneSplitscreen {
         [Header("Properties")]
         public TrapdoorType type;
         
-        [Header("Objects")]
+        [Header("References")]
         public GameObject latch;
         public GameObject indicator;
         public GameObject indicatorSymbol;
