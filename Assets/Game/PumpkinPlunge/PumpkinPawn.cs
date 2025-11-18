@@ -16,7 +16,6 @@ namespace Starter.PumpkinPlunge {
         void Start()
         {
             pumpkinOffset = pumpkin.transform.localPosition;
-            Debug.Log(pumpkinOffset);
         }
 
         public void SetMaterial(Material material)

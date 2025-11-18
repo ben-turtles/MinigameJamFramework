@@ -32,7 +32,6 @@ namespace Starter.PumpkinPlunge {
         [SerializeField] private float panelMoveTime = 0.25f;
         [SerializeField] private float indicatorMoveVelocity = 1;
         [SerializeField] private float indicatorMoveTime = 0.5f;
-        [SerializeField] private Vector3 panelOffset = new(0, 15, -7.5f);
 
         private float canvasWidth;
         private float canvasHeight;
@@ -81,9 +80,6 @@ namespace Starter.PumpkinPlunge {
             isPanelShown = PumpkinPlungeManager.gameStarted;
             updatePanelPosition = false;
             SetPanelPosition(GetPanelPosition());
-
-            // Move indicator
-            indicator.transform.localPosition = GetIndicatorPosition();
             indicator.SetActive(true);
         }
 
@@ -121,7 +117,6 @@ namespace Starter.PumpkinPlunge {
 
         void UpdateButtons()
         {
-            Vector3 selectedStart = selectedButton.transform.position;
             Vector3 panelPos = panel.transform.position;
             Vector3 panelScale = panel.transform.localScale;
             float diameter = panelScale.y * buttonScaleDiameterFactor;
@@ -131,7 +126,6 @@ namespace Starter.PumpkinPlunge {
             float panelButtonEndX = (0.5f - panelSizePaddingFactor) * panelScale.x;
             var values = buttons.Values;
             float padding = Math.Max(0, (panelButtonEndX - panelButtonStartX - (diameter * values.Count)) / values.Count);
-            Debug.Log(thickness);
             for (int i = 0; i < values.Count; i++)
             {
                 Button button = values.ElementAt(i);
@@ -150,7 +144,6 @@ namespace Starter.PumpkinPlunge {
             indicator.transform.rotation = selectedButton.transform.rotation;
             indicator.transform.localScale = selectedButton.transform.localScale;
             indicator.transform.localPosition = GetIndicatorPosition();
-                
         }
 
         void UpdatePanelScale()
@@ -186,7 +179,7 @@ namespace Starter.PumpkinPlunge {
                     isPanelShown ? 0 : -height * panelHiddenOffsetFactor
                 ),
                 panel.transform.localPosition.z
-            ); //+ panelOffset;
+            );
         }
 
         void UpdatePanelPosition()
@@ -205,6 +198,7 @@ namespace Starter.PumpkinPlunge {
         public void Hide()
         {
             isPanelShown = false;
+            updateIndicatorPosition = false;
             UpdatePanelPosition();
         }
 

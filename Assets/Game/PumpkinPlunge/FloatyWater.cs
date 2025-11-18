@@ -18,7 +18,6 @@ namespace Starter.PumpkinPlunge {
             if (other == playerCollider)
             {
                 inWater = true;
-                Debug.Log(playerBody.position.y);
             }
         }
 

@@ -11,7 +11,7 @@ namespace Starter.PumpkinPlunge {
         public TrapdoorType type;
         private float PUSH_PERCENT = 0.85f;
         private float PUSH_MAX_TIME = 0.2f;
-        private float WRONG_COOLDOWN = 0.8f;
+        private float WRONG_COOLDOWN = 0.5f;
         private float responseShowDuration = 1.5f;
         private float responseRiseStartPosition = 1.5f;
         private float responseRiseEndPosition = 2.5f;
