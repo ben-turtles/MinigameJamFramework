@@ -13,15 +13,13 @@ namespace Starter.PumpkinPlunge {
         private float PUSH_MAX_TIME = 0.2f;
         private float WRONG_COOLDOWN = 0.8f;
         private float responseShowDuration = 1.5f;
-        private float responseRiseStartPosition = 2f;
-        private float responseRiseEndPosition = 4f;
+        private float responseRiseStartPosition = 1.5f;
+        private float responseRiseEndPosition = 2.5f;
         private float responseColorAlphaOffset = 0.5f;
         private Color responseColorStart = Color.white;
         private Color responseColorEnd = new(1, 1, 1, 0);
+        [HideInInspector] public ButtonPanel panel;
 
-        private static bool buttonPushed = false;
-        private static bool wrongCooldown = false;
-        private static bool canPush => !buttonPushed && !wrongCooldown;
         private bool newPushCall = false;
         private bool positionInit = false;
         private float inPositionZ;
@@ -31,7 +29,7 @@ namespace Starter.PumpkinPlunge {
         void Start()
         {
             UpdateType();
-            buttonPushed = false;
+            panel.buttonPushed = false;
         }
 
         private float ButtonResponseEasing(float t)
@@ -41,12 +39,12 @@ namespace Starter.PumpkinPlunge {
 
         IEnumerator ShowButtonResponseRoutine(bool isSuccess)
         {
-            GameObject responseObject = Instantiate(responsePrefab, transform.parent);
+            GameObject responseObject = Instantiate(responsePrefab, transform);
             ButtonResponse response = responseObject.GetComponent<ButtonResponse>();
             GameObject symbol = isSuccess ? response.successSymbol : response.failureSymbol;
             symbol.SetActive(true);
             SpriteRenderer spriteRenderer = symbol.GetComponent<SpriteRenderer>();
-            response.transform.position = transform.position;
+            response.transform.localPosition = Vector3.zero;
             float timer = 0f;
             while (timer < responseShowDuration)
             {
@@ -79,10 +77,10 @@ namespace Starter.PumpkinPlunge {
 
         IEnumerator WrongChoiceRoutine()
         {
-            wrongCooldown = true;
+            panel.wrongCooldown = true;
             StartCoroutine(ShowButtonResponseRoutine(false));
             yield return new WaitForSeconds(WRONG_COOLDOWN);
-            wrongCooldown = false;
+            panel.wrongCooldown = false;
         }
 
         public bool Push()
@@ -93,11 +91,11 @@ namespace Starter.PumpkinPlunge {
                 spawnPositionZ = transform.localPosition.z;
                 inPositionZ = spawnPositionZ + buttonMoveOffset;
             }
-            if (!canPush)
+            if (!panel.canPush)
             {
                 return false;
             }
-            buttonPushed = true;
+            panel.buttonPushed = true;
             StartCoroutine(PushRoutine());
             return true;
         }
@@ -125,7 +123,7 @@ namespace Starter.PumpkinPlunge {
                 {
                     yield return new WaitForSeconds(PUSH_MAX_TIME - pushTime);
                 }
-                buttonPushed = false;
+                panel.buttonPushed = false;
                 newPushCall = false;
                 timer = 0f;
                 while (timer < PUSH_MAX_TIME && !newPushCall)

@@ -140,6 +140,7 @@ namespace Starter.PumpkinPlunge {
                 {
                     // No more trapdoors, finished!
                     player.buttonPanel.Hide();
+                    Destroy(player.buttonPanel.indicator);
                     finishedAt = PumpkinPlungeManager.currentTime;
                     cameraAtEnd = true;
                     cameraDidEndDrop = false;

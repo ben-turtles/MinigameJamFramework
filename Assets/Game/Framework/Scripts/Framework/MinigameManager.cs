@@ -70,6 +70,7 @@ public class MinigameManager : MonoBehaviour
     public void PopulateMinigameList() {
         minigames = new List<MinigameInfo>();
 
+        Debug.Log(debugMinigame);
         if (debugMinigame != null) {
             minigames.Add(debugMinigame);
         }

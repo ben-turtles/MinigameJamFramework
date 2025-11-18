@@ -1,5 +1,8 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using Unity.Properties;
+using Unity.VisualScripting;
 using UnityEngine;
 
 namespace Starter.PumpkinPlunge {
@@ -7,19 +10,37 @@ namespace Starter.PumpkinPlunge {
         [Header("References")]
         public PumpkinPlungeSubmanager submanager;
         [SerializeField] private GameObject panel;
-        [SerializeField] private GameObject indicator;
+        public GameObject indicator;
         [SerializeField] private GameObject buttonPrefab;
         [Header("Parameters")]
-        [SerializeField] private float panelButtonsPaddingX = 10;
-        [SerializeField] private float panelButtonsPaddingY = 10;
-        [SerializeField] private float panelExtraSizeX = 0;
-        [SerializeField] private float panelExtraSizeY = 10;
+        [SerializeField] private float panelSizeXPercent = 0.5f;
+        [SerializeField] private float panelSizeYPercent = 0.25f;
+        [SerializeField] private float panelSizeZ = 40;
+        [SerializeField] private float buttonScaleDiameterFactor = 0.6f;
+        [SerializeField] private float buttonOffsetYPercent = 0.1f;
+        [SerializeField] private float buttonScaleThicknessFactor = 0.2f;
+        [SerializeField] private float buttonIndicatorOffsetPercent = 0.1f;
+        [SerializeField] private float panelSizePaddingFactor = 0.04f;
+        // [SerializeField] private float panelButtonsPaddingX = 10;
+        // [SerializeField] private float panelButtonsPaddingY = 10;
+        // [SerializeField] private float panelExtraSizeX = 0;
+        // [SerializeField] private float panelExtraSizeY = 10;
+        // private Vector3 buttonSize;
+        [SerializeField] private float panelHeightShowPercent = 1f;
+        [SerializeField] private float panelHiddenOffsetFactor = 1.25f;
         [SerializeField] private float panelMoveVelocity = 15;
         [SerializeField] private float panelMoveTime = 0.25f;
-        [SerializeField] private float panelHiddenOffset = -60;
         [SerializeField] private float indicatorMoveVelocity = 1;
         [SerializeField] private float indicatorMoveTime = 0.5f;
         [SerializeField] private Vector3 panelOffset = new(0, 15, -7.5f);
+
+        private float canvasWidth;
+        private float canvasHeight;
+        private float materialFactor = 0.5f;
+        
+        [HideInInspector] public bool buttonPushed = false;
+        [HideInInspector] public bool wrongCooldown = false;
+        [HideInInspector] public bool canPush => !buttonPushed && !wrongCooldown;
 
         public static bool canUsePanel = false;
         private int selectedTypeIndex;
@@ -32,31 +53,14 @@ namespace Starter.PumpkinPlunge {
         private bool updatePanelPosition;
         private Vector3 targetPanelPosition;
         private Vector3 panelVelocity;
-        private float canvasHeight;
-        private Vector3 buttonSize;
         private bool allowPanelInputs => canUsePanel && isPanelShown;
         private bool isPanelShown = false;
         private Quaternion buttonRotate;
 
         void Start()
         {
-            // Move panel object
-            int typeCount = PumpkinPlungeManager.instance.trapdoorTypes.Count;
-            buttonSize = buttonPrefab.transform.localScale;
-            float panelThickness = panel.transform.localScale.z;
-            float panelWidth = (buttonSize.x * typeCount) + (panelButtonsPaddingX * (typeCount + 1)) + panelExtraSizeX;
-            float panelHeight = buttonSize.z + (panelButtonsPaddingY * 2) + panelExtraSizeY;
-            Rect canvasRect = GetComponent<RectTransform>().rect;
-            canvasHeight = canvasRect.height;
-            panel.transform.localScale = new(panelWidth, panelHeight, panelThickness);
-            Material material = panel.GetComponent<Renderer>().material;
-            float materialFactor = 0.5f;
-            material.mainTextureScale = materialFactor * new Vector2(
-                1, canvasRect.height * panelHeight / (canvasRect.width * panelWidth)
-            );
-            panel.transform.rotation *= Quaternion.Euler(15, 0, 0);
-
             // Make buttons
+            int typeCount = PumpkinPlungeManager.instance.trapdoorTypes.Count;
             for (int i = 0; i < typeCount; i++)
             {
                 TrapdoorType type = PumpkinPlungeManager.instance.trapdoorTypes[i];
@@ -65,10 +69,13 @@ namespace Starter.PumpkinPlunge {
                 {
                     buttonRotate = button.transform.rotation;
                 }
-                // button.defRotate = button.transform.rotation;
+                button.panel = this;
                 button.type = type;
                 buttons.Add(type, button);
             }
+
+            // Update scale of panel
+            UpdatePanelScale();
 
             // Toggle panel if game started
             isPanelShown = PumpkinPlungeManager.gameStarted;
@@ -76,7 +83,7 @@ namespace Starter.PumpkinPlunge {
             SetPanelPosition(GetPanelPosition());
 
             // Move indicator
-            indicator.transform.position = GetIndicatorPosition();
+            indicator.transform.localPosition = GetIndicatorPosition();
             indicator.SetActive(true);
         }
 
@@ -99,47 +106,87 @@ namespace Starter.PumpkinPlunge {
             else if (updateIndicatorPosition)
             {
                 // Move indicator to target
-                Vector3 startPosition = indicator.transform.position;
+                Vector3 startPosition = indicator.transform.localPosition;
                 Vector3 newPosition = Vector3.SmoothDamp(
                     startPosition, targetIndicatorPosition, ref indicatorVelocity, indicatorMoveTime
                 );
-                indicator.transform.position = newPosition;
+                indicator.transform.localPosition = newPosition;
                 if ((newPosition - startPosition).magnitude <= PumpkinPlungeManager.STOP_MARGIN)
                 {
-                    indicator.transform.position = targetIndicatorPosition;
+                    indicator.transform.localPosition = targetIndicatorPosition;
                     updateIndicatorPosition = false;
                 }
             }
         }
 
-        private void SetPanelPosition(Vector3 newPosition)
+        void UpdateButtons()
         {
-            panel.transform.localPosition = newPosition;
+            Vector3 selectedStart = selectedButton.transform.position;
+            Vector3 panelPos = panel.transform.position;
+            Vector3 panelScale = panel.transform.localScale;
+            float diameter = panelScale.y * buttonScaleDiameterFactor;
+            float thickness = panelScale.z * buttonScaleThicknessFactor;
+            float offsetY = panelScale.y * buttonOffsetYPercent;
+            float panelButtonStartX = (-0.5f + panelSizePaddingFactor) * panelScale.x;
+            float panelButtonEndX = (0.5f - panelSizePaddingFactor) * panelScale.x;
             var values = buttons.Values;
+            float padding = Math.Max(0, (panelButtonEndX - panelButtonStartX - (diameter * values.Count)) / values.Count);
+            Debug.Log(thickness);
             for (int i = 0; i < values.Count; i++)
             {
                 Button button = values.ElementAt(i);
-                button.transform.position = panel.transform.position;
-                button.transform.localPosition += new Vector3(
-                    (0.5f * (buttonSize.x - panel.transform.localScale.x - panelExtraSizeX)) + panelButtonsPaddingX + (i * (buttonSize.x + panelButtonsPaddingX)),
-                    0,
-                    -((0.5f * panel.transform.localScale.z) + buttonSize.y)
+                button.transform.position = panelPos;
+                button.transform.localScale = new(diameter, thickness, diameter);
+                float posX = panelButtonStartX + (0.5f + i) *(diameter + padding);
+                button.transform.localPosition =
+                    panel.transform.localPosition + (panel.transform.up * offsetY) +
+                    (button.transform.up * (0.5f * (panelScale.z - thickness) + thickness));
+                button.transform.localPosition = new(
+                    posX, button.transform.localPosition.y, button.transform.localPosition.z
                 );
-                button.transform.localPosition += panel.transform.up * (0.5f * panelExtraSizeY);
-                button.transform.rotation = buttonRotate * panel.transform.rotation;
+                button.transform.rotation = panel.transform.rotation;
+                button.transform.rotation *= Quaternion.Euler(-90, 0, 0);
             }
-            indicator.transform.position = GetIndicatorPosition();
             indicator.transform.rotation = selectedButton.transform.rotation;
+            indicator.transform.localScale = selectedButton.transform.localScale;
+            indicator.transform.localPosition = GetIndicatorPosition();
+                
+        }
+
+        void UpdatePanelScale()
+        {
+            Rect canvasRect = GetComponent<RectTransform>().rect;
+            canvasWidth = canvasRect.width;
+            canvasHeight = canvasRect.height;
+            panel.transform.localScale = new(
+                canvasWidth * panelSizeXPercent,
+                canvasHeight * panelSizeYPercent,
+                panelSizeZ
+            );
+            Material material = panel.GetComponent<Renderer>().material;
+            material.mainTextureScale = materialFactor * new Vector2(
+                1, canvasHeight * panel.transform.localScale.y / (canvasWidth * panel.transform.localScale.x)
+            );
+            panel.transform.rotation = Quaternion.Euler(15, 0, 0);
+            UpdateButtons();
+        }
+
+        private void SetPanelPosition(Vector3 newPosition)
+        {
+            panel.transform.localPosition = newPosition;
+            UpdateButtons();
         }
 
         private Vector3 GetPanelPosition()
         {
+            float height = panel.transform.localScale.y;
             return new Vector3(
                 panel.transform.localPosition.x,
-                0.5f * (-canvasHeight + (panel.transform.localScale.y - panelExtraSizeY))
-                + (isPanelShown ? 0 : panelHiddenOffset),
+                0.5f * (-canvasHeight + (height * panelHeightShowPercent)) + (
+                    isPanelShown ? 0 : -height * panelHiddenOffsetFactor
+                ),
                 panel.transform.localPosition.z
-            ) + panelOffset;
+            ); //+ panelOffset;
         }
 
         void UpdatePanelPosition()
@@ -163,19 +210,21 @@ namespace Starter.PumpkinPlunge {
 
         private Vector3 GetIndicatorPosition()
         {
-            return selectedButton.transform.position;
+            return selectedButton.transform.localPosition +
+                (panel.transform.up * -(selectedButton.transform.localScale.z * (1 + buttonIndicatorOffsetPercent)))
+                + (-selectedButton.transform.up * selectedButton.transform.localScale.y);
         }
         
         void UpdateIndicator()
         {
             targetIndicatorPosition = GetIndicatorPosition();
-            indicatorVelocity = indicatorMoveVelocity * (targetIndicatorPosition - indicator.transform.position).normalized;
+            indicatorVelocity = indicatorMoveVelocity * (targetIndicatorPosition - indicator.transform.localPosition).normalized;
             updateIndicatorPosition = true;
         }
 
         public void MoveLeft()
         {
-            if (!allowPanelInputs)
+            if (!allowPanelInputs || wrongCooldown)
             {
                 return;
             }
@@ -188,7 +237,7 @@ namespace Starter.PumpkinPlunge {
 
         public void MoveRight()
         {
-            if (!allowPanelInputs)
+            if (!allowPanelInputs || wrongCooldown)
             {
                 return;
             }
